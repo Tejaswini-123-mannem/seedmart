@@ -1,0 +1,4 @@
+/* This single line pulls in all of Tailwind's utility classes.
+   In Tailwind v4 there is no config file and no PostCSS setup needed —
+   the @tailwindcss/vite plugin (registered in vite.config.js) handles everything. */
+@import "tailwindcss";
