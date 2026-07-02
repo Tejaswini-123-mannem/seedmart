@@ -10,6 +10,16 @@
 
 import mongoose from "mongoose";
 
+// A bilingual { en, te } pair (same pattern as Product/Settings). Copied from
+// the approved submission, which by then carries both languages.
+const bilingualText = new mongoose.Schema(
+  {
+    en: { type: String, trim: true, default: "" },
+    te: { type: String, trim: true, default: "" },
+  },
+  { _id: false }
+);
+
 const reviewSchema = new mongoose.Schema(
   {
     // Which seed this review is about. Lets us query "all reviews for product X".
@@ -30,26 +40,15 @@ const reviewSchema = new mongoose.Schema(
       unique: true,
     },
 
-    // Public attribution of the verified result. Copied from the submission.
-    farmerName: {
-      type: String,
-      required: true,
-      trim: true,
-    },
+    // Public attribution of the verified result (bilingual). Copied from the
+    // submission, which carries both languages by approval time.
+    farmerName: { type: bilingualText, default: () => ({}) },
 
-    // The headline result, e.g. "32 bags/acre".
-    yield: {
-      type: String,
-      required: true,
-      trim: true,
-    },
+    // The headline result, e.g. "32 bags/acre" (bilingual).
+    yield: { type: bilingualText, default: () => ({}) },
 
-    // Public context (season, soil, practices).
-    notes: {
-      type: String,
-      trim: true,
-      default: "",
-    },
+    // Public context — season, soil, practices (bilingual).
+    notes: { type: bilingualText, default: () => ({}) },
 
     // Cloudinary URLs of the crop/result photos.
     photos: {

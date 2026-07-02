@@ -17,10 +17,15 @@ export default function Footer() {
 
   const shopName = settings?.shopName?.[lang] || "SeedMart";
   const contacts = (settings?.contacts || []).filter((c) => c.phone);
+  // Footer addresses: keep only rows that have a name in the current language
+  // (fall back to the other language so a single-language entry still shows).
+  const addresses = (settings?.addresses || [])
+    .map((a) => ({ name: a.label?.[lang] || a.label?.en || a.label?.te || "", mapLink: a.mapLink }))
+    .filter((a) => a.name);
 
   return (
     <footer className="bg-green-800 text-green-50 mt-12">
-      <div className="max-w-5xl mx-auto px-6 py-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="max-w-5xl mx-auto px-6 py-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
         {/* Brand */}
         <div>
           <p className="text-xl font-bold text-white">{shopName}</p>
@@ -75,6 +80,32 @@ export default function Footer() {
                     </a>
                   ) : (
                     <span>+91 {c.phone}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Visit Us — addresses linking to Google Maps (new tab) */}
+        {addresses.length > 0 && (
+          <div>
+            <p className="font-semibold text-white mb-2">{t("footer.visitUs")}</p>
+            <ul className="space-y-1 text-sm">
+              {addresses.map((a, i) => (
+                <li key={i} className="flex gap-1">
+                  <span aria-hidden="true">📍</span>
+                  {a.mapLink ? (
+                    <a
+                      href={a.mapLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:underline"
+                    >
+                      {a.name}
+                    </a>
+                  ) : (
+                    <span>{a.name}</span>
                   )}
                 </li>
               ))}

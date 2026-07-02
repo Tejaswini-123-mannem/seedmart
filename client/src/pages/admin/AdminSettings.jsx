@@ -48,7 +48,6 @@ const EMPTY = {
   shopNameEn: "", shopNameTe: "",
   shopDescEn: "", shopDescTe: "",
   whatsapp: "", contactPhone: "", contactEmail: "",
-  addressEn: "", addressTe: "",
   heroEn: "", heroTe: "",
   announceEn: "", announceTe: "",
   fb: "", ig: "", yt: "", wa: "",
@@ -66,6 +65,12 @@ export default function AdminSettings() {
     { label: "", phone: "" },
     { label: "", phone: "" },
     { label: "", phone: "" },
+  ]);
+  // Up to 3 footer addresses: bilingual name + Google Maps link.
+  const [addresses, setAddresses] = useState([
+    { labelEn: "", labelTe: "", mapLink: "" },
+    { labelEn: "", labelTe: "", mapLink: "" },
+    { labelEn: "", labelTe: "", mapLink: "" },
   ]);
   const [topBrands, setTopBrands] = useState([]); // selected brand names
   const [allBrands, setAllBrands] = useState([]); // available brands to pick from
@@ -86,7 +91,6 @@ export default function AdminSettings() {
           shopDescEn: s.shopDescription?.en || "", shopDescTe: s.shopDescription?.te || "",
           whatsapp: s.whatsappNumber || "",
           contactPhone: s.contactPhone || "", contactEmail: s.contactEmail || "",
-          addressEn: s.address?.en || "", addressTe: s.address?.te || "",
           heroEn: s.heroTagline?.en || "", heroTe: s.heroTagline?.te || "",
           announceEn: s.announcement?.en || "", announceTe: s.announcement?.te || "",
           fb: s.socialLinks?.facebook || "", ig: s.socialLinks?.instagram || "",
@@ -101,6 +105,13 @@ export default function AdminSettings() {
         setContacts([0, 1, 2].map((i) => ({
           label: cs[i]?.label || "",
           phone: cs[i]?.phone || "",
+        })));
+        // Load addresses, padded to 3 editable rows.
+        const as = s.addresses || [];
+        setAddresses([0, 1, 2].map((i) => ({
+          labelEn: as[i]?.label?.en || "",
+          labelTe: as[i]?.label?.te || "",
+          mapLink: as[i]?.mapLink || "",
         })));
         setTopBrands(s.topBrands || []);
         setMedia(s.mediaSlides || []);
@@ -143,6 +154,11 @@ export default function AdminSettings() {
     setSaved(false);
   };
 
+  const updateAddress = (i, key, val) => {
+    setAddresses((prev) => prev.map((a, idx) => (idx === i ? { ...a, [key]: val } : a)));
+    setSaved(false);
+  };
+
   const submit = async (e) => {
     e.preventDefault();
     setError(null);
@@ -158,7 +174,12 @@ export default function AdminSettings() {
         contactPhone: f.contactPhone,
         contactEmail: f.contactEmail,
         contacts: contacts.filter((c) => c.phone.trim()),
-        address: { en: f.addressEn, te: f.addressTe },
+        addresses: addresses
+          .filter((a) => a.labelEn.trim() || a.labelTe.trim())
+          .map((a) => ({
+            label: { en: a.labelEn, te: a.labelTe },
+            mapLink: a.mapLink.trim(),
+          })),
         heroTagline: { en: f.heroEn, te: f.heroTe },
         announcement: { en: f.announceEn, te: f.announceTe },
         socialLinks: { facebook: f.fb, instagram: f.ig, youtube: f.yt, whatsapp: f.wa },
@@ -209,8 +230,6 @@ export default function AdminSettings() {
             <Field label={t("aset.shopNameTe")} name="shopNameTe" value={f.shopNameTe} onChange={update} />
             <Field label={t("aset.shopDescEn")} name="shopDescEn" value={f.shopDescEn} onChange={update} textarea />
             <Field label={t("aset.shopDescTe")} name="shopDescTe" value={f.shopDescTe} onChange={update} textarea />
-            <Field label={t("aset.addressEn")} name="addressEn" value={f.addressEn} onChange={update} />
-            <Field label={t("aset.addressTe")} name="addressTe" value={f.addressTe} onChange={update} />
           </div>
           <div>
             <label className="block text-sm text-gray-700 mb-1">
@@ -248,6 +267,34 @@ export default function AdminSettings() {
                 </div>
               ))}
             </div>
+          </div>
+        </Section>
+
+        <Section title={t("aset.addresses")}>
+          <p className="text-xs text-gray-500">{t("aset.addressesHint")}</p>
+          <div className="space-y-3">
+            {addresses.map((a, i) => (
+              <div key={i} className="grid md:grid-cols-3 gap-2">
+                <input
+                  value={a.labelEn}
+                  onChange={(e) => updateAddress(i, "labelEn", e.target.value)}
+                  placeholder={t("aset.addressNameEn")}
+                  className={input}
+                />
+                <input
+                  value={a.labelTe}
+                  onChange={(e) => updateAddress(i, "labelTe", e.target.value)}
+                  placeholder={t("aset.addressNameTe")}
+                  className={input}
+                />
+                <input
+                  value={a.mapLink}
+                  onChange={(e) => updateAddress(i, "mapLink", e.target.value)}
+                  placeholder={t("aset.mapLink")}
+                  className={input}
+                />
+              </div>
+            ))}
           </div>
         </Section>
 

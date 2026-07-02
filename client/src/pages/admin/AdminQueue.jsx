@@ -15,12 +15,21 @@ import ImageUploader from "../../components/ImageUploader.jsx";
 import StatusBadge from "../../components/StatusBadge.jsx";
 import Lightbox from "../../components/Lightbox.jsx";
 
+const field =
+  "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-200";
+
 // ── A single submission card ────────────────────────────────────────────────
 function QueueCard({ submission, onDone }) {
-  const { lang, t } = useLang();
+  const { lang, t, tf } = useLang();
   const [mode, setMode] = useState(null); // null | "approve" | "reject"
   const [selected, setSelected] = useState([]); // farmer photos chosen to publish
   const [adminPhotos, setAdminPhotos] = useState([]); // extra admin uploads
+  // Editable bilingual review text, prefilled from the submission when approving.
+  const [edit, setEdit] = useState({
+    farmerName: { en: "", te: "" },
+    yield: { en: "", te: "" },
+    notes: { en: "", te: "" },
+  });
   const [reason, setReason] = useState("");
   const [working, setWorking] = useState(false);
   const [error, setError] = useState(null);
@@ -31,8 +40,19 @@ function QueueCard({ submission, onDone }) {
 
   // Enter approve mode with ALL the farmer's photos pre-selected (admin can
   // then deselect any, or clear all).
+  // Normalise a field to a bilingual pair (tolerates legacy plain strings).
+  const biFrom = (v) =>
+    typeof v === "string"
+      ? { en: v, te: "" }
+      : { en: v?.en || "", te: v?.te || "" };
+
   const startApprove = () => {
     setSelected(farmerPhotos);
+    setEdit({
+      farmerName: biFrom(submission.farmerName),
+      yield: biFrom(submission.yield),
+      notes: biFrom(submission.notes),
+    });
     setMode("approve");
   };
 
@@ -45,7 +65,12 @@ function QueueCard({ submission, onDone }) {
     try {
       // Final published photos = chosen farmer photos + any admin additions.
       const photos = [...selected, ...adminPhotos];
-      await apiPatch(`/api/submissions/${submission._id}/approve`, { photos });
+      await apiPatch(`/api/submissions/${submission._id}/approve`, {
+        photos,
+        farmerName: edit.farmerName,
+        yield: edit.yield,
+        notes: edit.notes,
+      });
       onDone();
     } catch (err) {
       setError(err.message);
@@ -83,7 +108,7 @@ function QueueCard({ submission, onDone }) {
       <div className="flex items-start justify-between gap-2">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 min-w-0">
           <span className="font-semibold text-gray-800 break-words">
-            {submission.farmerName}
+            {tf(submission.farmerName)}
           </span>
           <span className="text-sm text-green-700 font-medium">
             📞 {submission.phone}
@@ -107,12 +132,12 @@ function QueueCard({ submission, onDone }) {
         </p>
         <p>
           <span className="text-gray-400">{t("queue.yield")}:</span>{" "}
-          {submission.yield}
+          {tf(submission.yield)}
         </p>
-        {submission.notes && (
+        {tf(submission.notes) && (
           <p>
             <span className="text-gray-400">{t("queue.notes")}:</span>{" "}
-            {submission.notes}
+            {tf(submission.notes)}
           </p>
         )}
         {submission.status === "rejected" && submission.rejectionReason && (
@@ -142,9 +167,63 @@ function QueueCard({ submission, onDone }) {
         </div>
       )}
 
-      {/* Approve panel: pick which farmer photos to publish + add more. */}
+      {/* Approve panel: edit the review text, pick photos, add more. */}
       {isPending && mode === "approve" && (
         <div className="mt-3 border-t border-gray-100 pt-3 space-y-3">
+          {/* Editable BILINGUAL review text. The farmer's language is prefilled;
+              the admin adds the OTHER language and tidies both. */}
+          {[
+            { key: "farmerName", label: t("queue.editName") },
+            { key: "yield", label: t("queue.editYield") },
+          ].map(({ key, label }) => (
+            <div key={key}>
+              <label className="block text-xs text-gray-500 mb-1">{label}</label>
+              <div className="grid sm:grid-cols-2 gap-2">
+                <input
+                  value={edit[key].en}
+                  onChange={(e) =>
+                    setEdit((p) => ({ ...p, [key]: { ...p[key], en: e.target.value } }))
+                  }
+                  placeholder={t("queue.english")}
+                  className={field}
+                />
+                <input
+                  value={edit[key].te}
+                  onChange={(e) =>
+                    setEdit((p) => ({ ...p, [key]: { ...p[key], te: e.target.value } }))
+                  }
+                  placeholder={t("queue.telugu")}
+                  className={field}
+                />
+              </div>
+            </div>
+          ))}
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">
+              {t("queue.editNotes")}
+            </label>
+            <div className="grid sm:grid-cols-2 gap-2">
+              <textarea
+                value={edit.notes.en}
+                onChange={(e) =>
+                  setEdit((p) => ({ ...p, notes: { ...p.notes, en: e.target.value } }))
+                }
+                placeholder={t("queue.english")}
+                rows={2}
+                className={field}
+              />
+              <textarea
+                value={edit.notes.te}
+                onChange={(e) =>
+                  setEdit((p) => ({ ...p, notes: { ...p.notes, te: e.target.value } }))
+                }
+                placeholder={t("queue.telugu")}
+                rows={2}
+                className={field}
+              />
+            </div>
+          </div>
+
           {/* Farmer-submitted photos — selectable. */}
           {farmerPhotos.length > 0 && (
             <div>

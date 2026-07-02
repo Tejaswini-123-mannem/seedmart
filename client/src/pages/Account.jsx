@@ -17,7 +17,7 @@ import StatusBadge from "../components/StatusBadge.jsx";
 
 export default function Account() {
   const { user } = useAuth();
-  const { t, lang } = useLang();
+  const { t, lang, tf } = useLang();
   const { items: wishlist } = useWishlist();
 
   const [tab, setTab] = useState("wishlist");
@@ -98,9 +98,9 @@ export default function Account() {
                   </Link>
                   <StatusBadge status={s.status} />
                 </div>
-                <p className="text-green-700 text-sm mt-1">{s.yield}</p>
-                {s.notes && (
-                  <p className="text-sm text-gray-600 mt-1">{s.notes}</p>
+                <p className="text-green-700 text-sm mt-1">{tf(s.yield)}</p>
+                {tf(s.notes) && (
+                  <p className="text-sm text-gray-600 mt-1">{tf(s.notes)}</p>
                 )}
                 {s.status === "pending" && (
                   <p className="text-xs text-amber-700 mt-2">

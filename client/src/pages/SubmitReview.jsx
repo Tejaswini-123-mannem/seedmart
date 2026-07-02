@@ -49,11 +49,14 @@ export default function SubmitReview() {
     }
     setLoading(true);
     try {
-      // Only the claim fields — identity is set server-side.
+      // Only the claim fields — identity is set server-side. `language` tells
+      // the server which bilingual slot to store this text in; the admin adds
+      // the other language at approval.
       await apiPost("/api/submissions", {
         product: id,
         yield: form.yield,
         notes: form.notes,
+        language: lang,
         photos,
       });
       navigate("/account", { state: { justSubmitted: true } });

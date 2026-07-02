@@ -12,6 +12,17 @@
 
 import mongoose from "mongoose";
 
+// A bilingual { en, te } pair (same pattern as Product/Settings). Reviews are
+// bilingual: the farmer fills ONE language at submit time; the admin adds the
+// other (and may edit both) at approval.
+const bilingualText = new mongoose.Schema(
+  {
+    en: { type: String, trim: true, default: "" },
+    te: { type: String, trim: true, default: "" },
+  },
+  { _id: false }
+);
+
 const reviewSubmissionSchema = new mongoose.Schema(
   {
     // Which seed this review is about. A REFERENCE (not a copy) — product
@@ -31,12 +42,9 @@ const reviewSubmissionSchema = new mongoose.Schema(
     },
 
     // SNAPSHOT of the farmer's name at submission time. Copied from the account
-    // by the server — never trusted from the request body.
-    farmerName: {
-      type: String,
-      required: true,
-      trim: true,
-    },
+    // by the server (into the submit-language slot) — never trusted from the
+    // request body. The admin fills the other language at approval.
+    farmerName: { type: bilingualText, default: () => ({}) },
 
     // SNAPSHOT of the farmer's phone — the field the admin calls to verify the
     // claim is genuine. Snapshotted so it reflects the number AS IT WAS when the
@@ -47,20 +55,12 @@ const reviewSubmissionSchema = new mongoose.Schema(
       trim: true,
     },
 
-    // The headline claim, e.g. "32 bags/acre". Kept as a String so farmers can
-    // express units naturally ("32 bags/acre", "18 quintals").
-    yield: {
-      type: String,
-      required: [true, "Yield result is required"],
-      trim: true,
-    },
+    // The headline claim, e.g. "32 bags/acre". Bilingual; the controller
+    // validates that at least one language is present at submit time.
+    yield: { type: bilingualText, default: () => ({}) },
 
-    // Free-text context: season, soil, irrigation, practices.
-    notes: {
-      type: String,
-      trim: true,
-      default: "",
-    },
+    // Free-text context: season, soil, irrigation, practices. Bilingual.
+    notes: { type: bilingualText, default: () => ({}) },
 
     // Cloudinary URLs of the crop/result photos (reuses Stage 3b upload).
     photos: {

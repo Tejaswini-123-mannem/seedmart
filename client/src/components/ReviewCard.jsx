@@ -7,9 +7,11 @@
 // ----------------------------------------------------------------------------
 
 import { useState } from "react";
+import { useLang } from "../context/LanguageContext.jsx";
 import Lightbox from "./Lightbox.jsx";
 
 export default function ReviewCard({ review }) {
+  const { tf } = useLang();
   // null = closed; a number = the index of the photo to open at.
   const [openIndex, setOpenIndex] = useState(null);
 
@@ -20,13 +22,13 @@ export default function ReviewCard({ review }) {
   return (
     <div className="bg-white rounded-lg shadow p-4">
       <div className="flex items-center justify-between">
-        <span className="font-semibold text-gray-800">{review.farmerName}</span>
+        <span className="font-semibold text-gray-800">{tf(review.farmerName)}</span>
         <span className="text-green-700 font-medium text-sm">
-          {review.yield}
+          {tf(review.yield)}
         </span>
       </div>
-      {review.notes && (
-        <p className="text-sm text-gray-600 mt-1">{review.notes}</p>
+      {tf(review.notes) && (
+        <p className="text-sm text-gray-600 mt-1">{tf(review.notes)}</p>
       )}
 
       {review.photos?.length > 0 && (

@@ -46,9 +46,18 @@ export function LanguageProvider({ children }) {
   const tCategory = (category) =>
     categoryLabels[category]?.[lang] || category;
 
+  // Pick a bilingual { en, te } field for the current language, falling back to
+  // the other language if this one is empty. Tolerates legacy plain strings so
+  // older data (stored before reviews became bilingual) still renders.
+  const tf = (val) => {
+    if (val == null) return "";
+    if (typeof val === "string") return val;
+    return val[lang] || val.en || val.te || "";
+  };
+
   return (
     <LanguageContext.Provider
-      value={{ lang, setLanguage, toggleLang, t, tCategory }}
+      value={{ lang, setLanguage, toggleLang, t, tCategory, tf }}
     >
       {children}
     </LanguageContext.Provider>

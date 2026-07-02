@@ -21,11 +21,17 @@ export const createSubmission = async (req, res) => {
     // We ONLY accept the claim fields from the client. Identity fields
     // (farmerName, phone) and the status are set by the SERVER below — a client
     // must never be able to forge another farmer's identity or self-approve.
-    const { product, yield: yieldResult, notes, photos } = req.body;
+    // `language` tells us which bilingual slot the farmer typed in.
+    const { product, yield: yieldResult, notes, photos, language } = req.body;
 
     // 1. Validate the product reference: must be a well-formed id AND exist.
     if (!mongoose.Types.ObjectId.isValid(product)) {
       return res.status(400).json({ message: "Invalid product id" });
+    }
+
+    // yield is required — the farmer must provide it in their language.
+    if (!yieldResult || !yieldResult.trim()) {
+      return res.status(400).json({ message: "Yield result is required" });
     }
     const productExists = await Product.exists({ _id: product });
     if (!productExists) {
@@ -42,13 +48,22 @@ export const createSubmission = async (req, res) => {
 
     // 3. Create the submission. status defaults to "pending" in the schema —
     //    we do not read it from the body, so no one can self-approve.
+    //    The farmer types in ONE language (the current UI language). We store
+    //    their text — and the snapshotted name — in that slot, leaving the other
+    //    language empty for the admin to fill at approval.
+    const lang = language === "te" ? "te" : "en";
+    const slot = (val) =>
+      lang === "te"
+        ? { en: "", te: (val || "").trim() }
+        : { en: (val || "").trim(), te: "" };
+
     const submission = await ReviewSubmission.create({
       product,
       user: user._id,
-      farmerName: user.username,
+      farmerName: slot(user.username),
       phone: user.phone,
-      yield: yieldResult,
-      notes,
+      yield: slot(yieldResult),
+      notes: slot(notes),
       photos,
     });
 
@@ -115,6 +130,22 @@ export const approveSubmission = async (req, res) => {
   // Cloudinary URLs arrive in the body; default to none.
   const photos = Array.isArray(req.body.photos) ? req.body.photos : [];
 
+  // The admin edits the review TEXT at approval — typically adding the SECOND
+  // language the farmer didn't provide, and tidying the first. Each field
+  // arrives as a bilingual { en, te } object and overwrites both the audit
+  // submission and the public Review (see approve logic below).
+  const { farmerName, yield: yieldEdit, notes } = req.body;
+
+  // Merge an admin bilingual edit onto the current value. A required field is
+  // never left with BOTH languages empty — it falls back to the original.
+  const clean = (v) => (typeof v === "string" ? v.trim() : "");
+  const applyBilingual = (edit, current, required) => {
+    if (!edit || typeof edit !== "object") return current;
+    const next = { en: clean(edit.en), te: clean(edit.te) };
+    if (required && !next.en && !next.te) return current;
+    return next;
+  };
+
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(404).json({ message: "Submission not found" });
   }
@@ -144,7 +175,12 @@ export const approveSubmission = async (req, res) => {
         };
       }
 
-      // 3. Flip the audit record's status.
+      // 3. Apply the admin's bilingual text edits, then flip the status.
+      //    farmerName and yield are REQUIRED (must keep ≥1 language); notes may
+      //    be legitimately cleared in both languages.
+      submission.farmerName = applyBilingual(farmerName, submission.farmerName, true);
+      submission.yield = applyBilingual(yieldEdit, submission.yield, true);
+      submission.notes = applyBilingual(notes, submission.notes, false);
       submission.status = "approved";
       await submission.save({ session });
 
@@ -155,9 +191,9 @@ export const approveSubmission = async (req, res) => {
           {
             product: submission.product,
             submission: submission._id,
-            farmerName: submission.farmerName,
-            yield: submission.yield,
-            notes: submission.notes,
+            farmerName: { en: submission.farmerName.en, te: submission.farmerName.te },
+            yield: { en: submission.yield.en, te: submission.yield.te },
+            notes: { en: submission.notes.en, te: submission.notes.te },
             photos, // admin-supplied crop photos (see top of function)
           },
         ],

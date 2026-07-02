@@ -60,7 +60,23 @@ const settingsSchema = new mongoose.Schema(
       default: [],
     },
 
-    address: { type: bilingualText, default: () => ({}) },
+    // Up to a few shop/branch addresses shown in the footer. Each has a
+    // bilingual label (the display name) and a Google Maps link that opens in
+    // a new tab. An empty label hides the row; an empty mapLink shows the
+    // label as plain text.
+    addresses: {
+      type: [
+        new mongoose.Schema(
+          {
+            label: { type: bilingualText, default: () => ({}) },
+            mapLink: { type: String, trim: true, default: "" },
+          },
+          { _id: false }
+        ),
+      ],
+      default: [],
+    },
+
     heroTagline: { type: bilingualText, default: () => ({}) },
     announcement: { type: bilingualText, default: () => ({}) },
 
