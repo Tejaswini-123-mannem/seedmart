@@ -7,7 +7,7 @@
 //   PATCH /api/submissions/:id/reject   { rejectionReason }
 // ----------------------------------------------------------------------------
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { apiGet, apiPatch, apiDel } from "../../api/client.js";
 import { useLang } from "../../context/LanguageContext.jsx";
 import AdminNav from "../../components/admin/AdminNav.jsx";
@@ -242,7 +242,7 @@ function QueueCard({ submission, onDone }) {
                     onClick={() => setSelected([])}
                     className="text-gray-500"
                   >
-                    {t("queue.clearAll")}
+                    {t("queue.clear")}
                   </button>
                 </div>
               </div>
@@ -346,6 +346,246 @@ function QueueCard({ submission, onDone }) {
   );
 }
 
+// ── Live Reviews panel ──────────────────────────────────────────────────────
+// Lists the ACTUAL public Review collection — exactly what visitors see on
+// product pages — including LEGACY / ORPHANED reviews that have no submission
+// and therefore never appear in the status tabs above. Each row can be edited
+// (bilingual) or deleted. This is how the admin cleans up old-format reviews.
+//   GET    /api/reviews
+//   PATCH  /api/reviews/:id   { farmerName, yield, notes }  (bilingual)
+//   DELETE /api/reviews/:id
+function ReviewsPanel() {
+  const { lang, t, tf } = useLang();
+
+  const [reviews, setReviews] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Which review is open for editing, and its working bilingual copy.
+  const [editingId, setEditingId] = useState(null);
+  const [edit, setEdit] = useState({
+    farmerName: { en: "", te: "" },
+    yield: { en: "", te: "" },
+    notes: { en: "", te: "" },
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Normalise a field to a bilingual pair (tolerates legacy plain strings).
+  const biFrom = (v) =>
+    typeof v === "string"
+      ? { en: v, te: "" }
+      : { en: v?.en || "", te: v?.te || "" };
+
+  // Load the published reviews once on mount. State is set only from the async
+  // callbacks (never synchronously in the effect body); `active` drops the
+  // response if the component unmounts first. `loading` starts true, so there
+  // is no synchronous setLoading(true) here.
+  useEffect(() => {
+    let active = true;
+    apiGet("/api/reviews")
+      .then((list) => {
+        if (active) setReviews(list);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const startEdit = (r) => {
+    setError(null);
+    setEditingId(r._id);
+    setEdit({
+      farmerName: biFrom(r.farmerName),
+      yield: biFrom(r.yield),
+      notes: biFrom(r.notes),
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setError(null);
+  };
+
+  const save = async (id) => {
+    setSaving(true);
+    setError(null);
+    try {
+      const { review } = await apiPatch(`/api/reviews/${id}`, {
+        farmerName: edit.farmerName,
+        yield: edit.yield,
+        notes: edit.notes,
+      });
+      // Swap the updated review into the list in place (keeps the populated
+      // product fields from the row we already had).
+      setReviews((rs) => rs.map((r) => (r._id === id ? { ...r, ...review } : r)));
+      setEditingId(null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const remove = async (id) => {
+    if (!window.confirm(t("queue.confirmDeleteReview"))) return;
+    try {
+      await apiDel(`/api/reviews/${id}`);
+      setReviews((rs) => rs.filter((r) => r._id !== id));
+    } catch {
+      // on failure, leave the list as-is; a reload resyncs
+    }
+  };
+
+  if (loading) return <p className="text-gray-500">{t("admin.loading")}</p>;
+  if (reviews.length === 0)
+    return <p className="text-gray-500">{t("queue.reviewsNone")}</p>;
+
+  return (
+    <div>
+      <p className="text-sm text-gray-500 mb-3">{t("queue.reviewsHint")}</p>
+      <div className="bg-white rounded-xl shadow overflow-x-auto">
+        <table className="w-full text-sm min-w-[32rem]">
+          <thead className="bg-gray-50 text-gray-500 text-left">
+            <tr>
+              <th className="px-4 py-2">{t("queue.colFarmer")}</th>
+              <th className="px-4 py-2">{t("queue.product")}</th>
+              <th className="px-4 py-2">{t("queue.yield")}</th>
+              <th className="px-4 py-2 text-right">{t("queue.colActions")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {reviews.map((r) => (
+              <Fragment key={r._id}>
+                <tr className="border-t border-gray-100">
+                  <td className="px-4 py-2 font-medium text-gray-800">
+                    {tf(r.farmerName) || "—"}
+                  </td>
+                  <td className="px-4 py-2 text-gray-600">
+                    {r.product?.name?.[lang] || "—"}
+                  </td>
+                  <td className="px-4 py-2 text-gray-600">{tf(r.yield) || "—"}</td>
+                  <td className="px-4 py-2 text-right whitespace-nowrap">
+                    <button
+                      onClick={() => startEdit(r)}
+                      className="text-green-700 hover:underline mr-3"
+                    >
+                      {t("admin.edit")}
+                    </button>
+                    <button
+                      onClick={() => remove(r._id)}
+                      className="text-red-600 hover:underline"
+                    >
+                      {t("admin.delete")}
+                    </button>
+                  </td>
+                </tr>
+
+                {/* Inline bilingual edit panel for the open row. */}
+                {editingId === r._id && (
+                  <tr className="border-t border-gray-100 bg-green-50/40">
+                    <td colSpan={4} className="px-4 py-4">
+                      <div className="space-y-3">
+                        {[
+                          { key: "farmerName", label: t("queue.editName") },
+                          { key: "yield", label: t("queue.editYield") },
+                        ].map(({ key, label }) => (
+                          <div key={key}>
+                            <label className="block text-xs text-gray-500 mb-1">
+                              {label}
+                            </label>
+                            <div className="grid sm:grid-cols-2 gap-2">
+                              <input
+                                value={edit[key].en}
+                                onChange={(e) =>
+                                  setEdit((p) => ({
+                                    ...p,
+                                    [key]: { ...p[key], en: e.target.value },
+                                  }))
+                                }
+                                placeholder={t("queue.english")}
+                                className={field}
+                              />
+                              <input
+                                value={edit[key].te}
+                                onChange={(e) =>
+                                  setEdit((p) => ({
+                                    ...p,
+                                    [key]: { ...p[key], te: e.target.value },
+                                  }))
+                                }
+                                placeholder={t("queue.telugu")}
+                                className={field}
+                              />
+                            </div>
+                          </div>
+                        ))}
+
+                        <div>
+                          <label className="block text-xs text-gray-500 mb-1">
+                            {t("queue.editNotes")}
+                          </label>
+                          <div className="grid sm:grid-cols-2 gap-2">
+                            <textarea
+                              value={edit.notes.en}
+                              onChange={(e) =>
+                                setEdit((p) => ({
+                                  ...p,
+                                  notes: { ...p.notes, en: e.target.value },
+                                }))
+                              }
+                              placeholder={t("queue.english")}
+                              rows={2}
+                              className={field}
+                            />
+                            <textarea
+                              value={edit.notes.te}
+                              onChange={(e) =>
+                                setEdit((p) => ({
+                                  ...p,
+                                  notes: { ...p.notes, te: e.target.value },
+                                }))
+                              }
+                              placeholder={t("queue.telugu")}
+                              rows={2}
+                              className={field}
+                            />
+                          </div>
+                        </div>
+
+                        {error && <p className="text-red-600 text-xs">{error}</p>}
+
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => save(r._id)}
+                            disabled={saving}
+                            className="bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white text-sm rounded px-4 py-1.5"
+                          >
+                            {saving ? t("admin.saving") : t("admin.save")}
+                          </button>
+                          <button
+                            onClick={cancelEdit}
+                            className="text-gray-500 text-sm px-3"
+                          >
+                            {t("queue.cancel")}
+                          </button>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 // ── The queue page ──────────────────────────────────────────────────────────
 export default function AdminQueue() {
   const { t } = useLang();
@@ -354,6 +594,13 @@ export default function AdminQueue() {
   const [loading, setLoading] = useState(true);
   const [clearing, setClearing] = useState(false);
 
+  // The "Live Reviews" tab reads a DIFFERENT collection (the public Review
+  // model, rendered by <ReviewsPanel/>), so the submission fetch + bulk-delete
+  // below are skipped for it.
+  const isReviews = status === "reviews";
+
+  // Imperative refresh after an approve/reject/delete or bulk-clear. Called from
+  // event handlers only (never the effect), so setting `loading` here is safe.
   const load = () => {
     setLoading(true);
     apiGet(`/api/submissions?status=${status}`)
@@ -362,7 +609,33 @@ export default function AdminQueue() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(load, [status]);
+  // Switch tabs. We flip `loading` in this event handler rather than inside the
+  // fetch effect below, so the effect never calls setState synchronously (React
+  // flags that as a cascading-render risk). The Live Reviews tab manages its own
+  // loading inside <ReviewsPanel/>, so we don't show the submission spinner.
+  const selectTab = (key) => {
+    setStatus(key);
+    setLoading(key !== "reviews");
+  };
+
+  // Fetch the active tab's submissions whenever the tab changes. State is set
+  // only from the async callbacks; the `active` flag drops a stale response if
+  // the tab changed again before this one resolved.
+  useEffect(() => {
+    if (isReviews) return;
+    let active = true;
+    apiGet(`/api/submissions?status=${status}`)
+      .then((list) => {
+        if (active) setItems(list);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [status, isReviews]);
 
   // Bulk-delete every submission currently shown (the whole active tab).
   const clearAll = async () => {
@@ -390,7 +663,7 @@ export default function AdminQueue() {
       <AdminNav />
       <div className="flex items-center justify-between mb-4 gap-2">
         <h1 className="text-xl font-bold text-green-700">{t("queue.title")}</h1>
-        {items.length > 0 && (
+        {!isReviews && items.length > 0 && (
           <button
             onClick={clearAll}
             disabled={clearing}
@@ -403,18 +676,23 @@ export default function AdminQueue() {
 
       {/* Status filter */}
       <div className="flex gap-2 mb-4">
-        <button onClick={() => setStatus("pending")} className={tabBtn("pending")}>
+        <button onClick={() => selectTab("pending")} className={tabBtn("pending")}>
           {t("queue.filterPending")}
         </button>
-        <button onClick={() => setStatus("approved")} className={tabBtn("approved")}>
+        <button onClick={() => selectTab("approved")} className={tabBtn("approved")}>
           {t("queue.filterApproved")}
         </button>
-        <button onClick={() => setStatus("rejected")} className={tabBtn("rejected")}>
+        <button onClick={() => selectTab("rejected")} className={tabBtn("rejected")}>
           {t("queue.filterRejected")}
+        </button>
+        <button onClick={() => selectTab("reviews")} className={tabBtn("reviews")}>
+          {t("queue.filterReviews")}
         </button>
       </div>
 
-      {loading ? (
+      {isReviews ? (
+        <ReviewsPanel />
+      ) : loading ? (
         <p className="text-gray-500">{t("admin.loading")}</p>
       ) : items.length === 0 ? (
         <p className="text-gray-500">{t("queue.empty")}</p>

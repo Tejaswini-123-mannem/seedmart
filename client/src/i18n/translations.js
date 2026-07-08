@@ -253,7 +253,7 @@ export const translations = {
     "queue.telugu": "Telugu",
     "queue.farmerPhotos": "Farmer's photos — tap to include / exclude",
     "queue.selectAll": "Select all",
-    "queue.clearAll": "Clear",
+    "queue.clear": "Clear",
     "queue.addMore": "Add more photos (optional)",
     "queue.confirmApprove": "Confirm approval",
     "queue.rejectReason": "Reason for rejection (optional)",
@@ -266,6 +266,13 @@ export const translations = {
     "queue.clearAll": "Clear all",
     "queue.confirmClearAll": "Delete ALL {n} submission(s) in this tab? Approved ones also lose their public reviews. This cannot be undone.",
     "queue.clearing": "Clearing…",
+    // Live Reviews tab — the actual public Review collection (incl. legacy orphans)
+    "queue.filterReviews": "Live Reviews",
+    "queue.reviewsNone": "No live reviews on the site.",
+    "queue.reviewsHint": "Every review currently shown on the public site, including older ones. Edit or delete any of them here.",
+    "queue.colFarmer": "Farmer",
+    "queue.colActions": "Actions",
+    "queue.confirmDeleteReview": "Delete this review from the public site? This cannot be undone.",
 
     // 404
     "notfound.message": "That page doesn’t exist.",
@@ -515,7 +522,7 @@ export const translations = {
     "queue.telugu": "తెలుగు",
     "queue.farmerPhotos": "రైతు ఫోటోలు — చేర్చడానికి / తీసివేయడానికి నొక్కండి",
     "queue.selectAll": "అన్నీ ఎంచుకోండి",
-    "queue.clearAll": "క్లియర్",
+    "queue.clear": "క్లియర్",
     "queue.addMore": "మరిన్ని ఫోటోలు జోడించండి (ఐచ్ఛికం)",
     "queue.confirmApprove": "ఆమోదాన్ని నిర్ధారించండి",
     "queue.rejectReason": "తిరస్కరణకు కారణం (ఐచ్ఛికం)",
@@ -528,6 +535,13 @@ export const translations = {
     "queue.clearAll": "అన్నీ క్లియర్ చేయండి",
     "queue.confirmClearAll": "ఈ ట్యాబ్‌లోని మొత్తం {n} సమర్పణలను తొలగించాలా? ఆమోదించబడినవి వాటి పబ్లిక్ సమీక్షలను కూడా కోల్పోతాయి. దీన్ని రద్దు చేయలేరు.",
     "queue.clearing": "క్లియర్ అవుతోంది…",
+    // Live Reviews tab — the actual public Review collection (incl. legacy orphans)
+    "queue.filterReviews": "ప్రత్యక్ష సమీక్షలు",
+    "queue.reviewsNone": "సైట్‌లో ప్రత్యక్ష సమీక్షలు లేవు.",
+    "queue.reviewsHint": "పబ్లిక్ సైట్‌లో ప్రస్తుతం కనిపించే ప్రతి సమీక్ష, పాతవి కూడా. వాటిలో దేనినైనా ఇక్కడ సవరించండి లేదా తొలగించండి.",
+    "queue.colFarmer": "రైతు",
+    "queue.colActions": "చర్యలు",
+    "queue.confirmDeleteReview": "ఈ సమీక్షను పబ్లిక్ సైట్ నుండి తొలగించాలా? దీన్ని రద్దు చేయలేరు.",
 
     // 404
     "notfound.message": "ఆ పేజీ లేదు.",
